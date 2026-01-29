@@ -1,5 +1,5 @@
 import { html, nothing } from "lit";
-
+import { t } from "../../i18n/i18n";
 import { clampText } from "../format";
 import type { SkillStatusEntry, SkillStatusReport } from "../types";
 import type { SkillMessageMap } from "../controllers/skills";
@@ -37,7 +37,7 @@ export function renderSkills(props: SkillsProps) {
       <div class="row" style="justify-content: space-between;">
         <div>
           <div class="card-title">Skills</div>
-          <div class="card-sub">Bundled, managed, and workspace skills.</div>
+          <div class="card-sub">${t('skills.subtitle')}</div>
         </div>
         <button class="btn" ?disabled=${props.loading} @click=${props.onRefresh}>
           ${props.loading ? "Loading…" : "Refresh"}

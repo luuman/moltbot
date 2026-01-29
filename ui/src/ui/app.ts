@@ -80,7 +80,7 @@ import type { NostrProfileFormState } from "./views/channels.nostr-profile-form"
 import { loadAssistantIdentity as loadAssistantIdentityInternal } from "./controllers/assistant-identity";
 
 // Import i18n components
-import './i18n/LocaleSelector.js';
+import './i18n/LocaleSelector.ts';
 
 declare global {
   interface Window {

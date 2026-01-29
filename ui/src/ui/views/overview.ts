@@ -4,7 +4,7 @@ import type { GatewayHelloOk } from "../gateway";
 import { formatAgo, formatDurationMs } from "../format";
 import { formatNextRun } from "../presenter";
 import type { UiSettings } from "../storage";
-import { t } from "../i18n/i18n.js";
+import { t } from "../../i18n/i18n";
 
 export type OverviewProps = {
   connected: boolean;

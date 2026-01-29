@@ -1,5 +1,6 @@
 import { html } from "lit";
 
+import { t } from "../../i18n/i18n";
 import type { ConfigUiHints } from "../types";
 import type { ChannelsProps } from "./channels.types";
 import {
@@ -71,11 +72,11 @@ export function renderChannelConfigForm(props: ChannelConfigFormProps) {
   const analysis = analyzeConfigSchema(props.schema);
   const normalized = analysis.schema;
   if (!normalized) {
-    return html`<div class="callout danger">Schema unavailable. Use Raw.</div>`;
+    return html`<div class="callout danger">${t('channels.config.schema_unavailable')} ${t('channels.config.use_raw')}</div>`;
   }
   const node = resolveSchemaNode(normalized, ["channels", props.channelId]);
   if (!node) {
-    return html`<div class="callout danger">Channel config schema unavailable.</div>`;
+    return html`<div class="callout danger">${t('channels.config.channel_config_schema_unavailable')}</div>`;
   }
   const configValue = props.configValue ?? {};
   const value = resolveChannelValue(configValue, props.channelId);
@@ -104,7 +105,7 @@ export function renderChannelConfigSection(params: {
   return html`
     <div style="margin-top: 16px;">
       ${props.configSchemaLoading
-        ? html`<div class="muted">Loading config schema…</div>`
+        ? html`<div class="muted">${t('channels.config.loading_config_schema')}</div>`
         : renderChannelConfigForm({
             channelId,
             configValue: props.configForm,
@@ -119,14 +120,14 @@ export function renderChannelConfigSection(params: {
           ?disabled=${disabled || !props.configFormDirty}
           @click=${() => props.onConfigSave()}
         >
-          ${props.configSaving ? "Saving…" : "Save"}
+          ${props.configSaving ? t('common.loading') : t('channels.config.save_button')}
         </button>
         <button
           class="btn"
           ?disabled=${disabled}
           @click=${() => props.onConfigReload()}
         >
-          Reload
+          ${t('channels.config.reload_button')}
         </button>
       </div>
     </div>

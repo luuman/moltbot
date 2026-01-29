@@ -2,6 +2,7 @@ import { html, nothing } from "lit";
 
 import { formatPresenceAge, formatPresenceSummary } from "../presenter";
 import type { PresenceEntry } from "../types";
+import { t } from "../../i18n/i18n";
 
 export type InstancesProps = {
   loading: boolean;
@@ -16,11 +17,11 @@ export function renderInstances(props: InstancesProps) {
     <section class="card">
       <div class="row" style="justify-content: space-between;">
         <div>
-          <div class="card-title">Connected Instances</div>
-          <div class="card-sub">Presence beacons from the gateway and clients.</div>
+          <div class="card-title">${t("page.title.instances")}</div>
+          <div class="card-sub">${t("page.subtitle.instances")}</div>
         </div>
         <button class="btn" ?disabled=${props.loading} @click=${props.onRefresh}>
-          ${props.loading ? "Loading…" : "Refresh"}
+          ${props.loading ? t("common.loading") : t("common.refresh")}
         </button>
       </div>
       ${props.lastError
@@ -35,7 +36,7 @@ export function renderInstances(props: InstancesProps) {
         : nothing}
       <div class="list" style="margin-top: 16px;">
         ${props.entries.length === 0
-          ? html`<div class="muted">No instances reported yet.</div>`
+          ? html`<div class="muted">${t("instances.no_instances_yet")}</div>`
           : props.entries.map((entry) => renderEntry(entry))}
       </div>
     </section>
@@ -45,21 +46,21 @@ export function renderInstances(props: InstancesProps) {
 function renderEntry(entry: PresenceEntry) {
   const lastInput =
     entry.lastInputSeconds != null
-      ? `${entry.lastInputSeconds}s ago`
-      : "n/a";
-  const mode = entry.mode ?? "unknown";
+      ? `${entry.lastInputSeconds}${t("instances.seconds_ago")}`
+      : t("common.n_a");
+  const mode = entry.mode ?? t("instances.unknown");
   const roles = Array.isArray(entry.roles) ? entry.roles.filter(Boolean) : [];
   const scopes = Array.isArray(entry.scopes) ? entry.scopes.filter(Boolean) : [];
   const scopesLabel =
     scopes.length > 0
       ? scopes.length > 3
-        ? `${scopes.length} scopes`
-        : `scopes: ${scopes.join(", ")}`
+        ? `${scopes.length} ${t("instances.scopes")}`
+        : `${t("instances.scopes_label")}: ${scopes.join(", ")}`
       : null;
   return html`
     <div class="list-item">
       <div class="list-main">
-        <div class="list-title">${entry.host ?? "unknown host"}</div>
+        <div class="list-title">${entry.host ?? t("instances.unknown_host")}</div>
         <div class="list-sub">${formatPresenceSummary(entry)}</div>
         <div class="chip-row">
           <span class="chip">${mode}</span>
@@ -77,8 +78,8 @@ function renderEntry(entry: PresenceEntry) {
       </div>
       <div class="list-meta">
         <div>${formatPresenceAge(entry)}</div>
-        <div class="muted">Last input ${lastInput}</div>
-        <div class="muted">Reason ${entry.reason ?? ""}</div>
+        <div class="muted">${t("instances.last_input")} ${lastInput}</div>
+        <div class="muted">${t("instances.reason")} ${entry.reason ?? ""}</div>
       </div>
     </div>
   `;
