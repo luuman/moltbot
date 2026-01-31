@@ -87,6 +87,7 @@ export interface XiaomiConfig {
   cloud_server: string; // 'cn' | 'de' | 'i2' | 'ru' | 'sg' | 'us'
   client_id: string;
   redirect_url: string;
+  uuid?: string; // Client UUID for consistent device_id across sessions
   token?: OAuthToken;
   user_info?: UserInfo;
   devices?: Record<string, DeviceInfo>;

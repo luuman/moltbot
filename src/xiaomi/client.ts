@@ -45,8 +45,8 @@ export class XiaomiClient {
       storage_path: this.config.storage_path || undefined,
     });
 
-    // Generate UUID for this client
-    this.uuid = crypto.randomBytes(16).toString("hex");
+    // UUID will be loaded from storage in init(), or generated if not exists
+    this.uuid = "";
   }
 
   /**
@@ -66,6 +66,10 @@ export class XiaomiClient {
       if (savedConfig.redirect_url) {
         this.config.redirect_url = savedConfig.redirect_url;
       }
+      // Load UUID from config (important for consistent device_id)
+      if (savedConfig.uuid) {
+        this.uuid = savedConfig.uuid;
+      }
 
       // Load cached data
       this.devices = savedConfig.devices;
@@ -77,6 +81,18 @@ export class XiaomiClient {
         await this.initializeClients(savedConfig.token);
         return true;
       }
+    }
+
+    // Generate UUID if not loaded from config
+    if (!this.uuid) {
+      this.uuid = crypto.randomBytes(16).toString("hex");
+      // Save UUID to config immediately so it persists
+      await this.storage.saveConfig({
+        cloud_server: this.config.cloud_server,
+        client_id: this.config.client_id,
+        redirect_url: this.config.redirect_url,
+        uuid: this.uuid,
+      });
     }
 
     return false;
@@ -205,16 +221,30 @@ export class XiaomiClient {
     this.homes = homeInfos.home_list;
     await this.storage.updateHomes(this.homes);
 
-    // Get all home IDs
-    const homeIds = Object.keys(this.homes);
+    // Collect all device IDs from homes (including rooms)
+    const deviceIds: string[] = [];
+    for (const home of Object.values(this.homes)) {
+      // Add devices from home's top-level dids
+      if (home.dids && Array.isArray(home.dids)) {
+        deviceIds.push(...home.dids);
+      }
+      // Add devices from each room
+      if (home.room_info) {
+        for (const room of Object.values(home.room_info)) {
+          if (room.dids && Array.isArray(room.dids)) {
+            deviceIds.push(...room.dids);
+          }
+        }
+      }
+    }
 
-    if (homeIds.length === 0) {
+    if (deviceIds.length === 0) {
       this.devices = {};
       return this.devices;
     }
 
-    // Load devices for all homes
-    this.devices = await this.httpClient.getDeviceList(homeIds);
+    // Load devices by device IDs
+    this.devices = await this.httpClient.getDeviceList(deviceIds);
     await this.storage.updateDevices(this.devices);
 
     return this.devices;
