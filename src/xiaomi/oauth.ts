@@ -106,16 +106,22 @@ export class XiaomiOAuthClient {
   /**
    * Get access token by authorization code
    */
-  async getAccessToken(code: string): Promise<OAuthToken> {
+  async getAccessToken(
+    code: string,
+    options?: {
+      redirect_uri?: string;
+      device_id?: string;
+    },
+  ): Promise<OAuthToken> {
     if (!code || typeof code !== "string") {
       throw new XiaomiOAuthError("Invalid authorization code");
     }
 
     return await this._getTokenAsync({
       client_id: this.client_id,
-      redirect_uri: this.redirect_url,
+      redirect_uri: options?.redirect_uri || this.redirect_url,
       code,
-      device_id: this.device_id,
+      device_id: options?.device_id || this.device_id,
     });
   }
 

@@ -52,7 +52,7 @@ async function cmdLogin() {
   console.log("");
 }
 
-async function cmdLoginCode(code: string) {
+async function cmdLoginCode(code: string, options?: { redirectUri?: string; deviceId?: string }) {
   if (!code) {
     console.error("错误: 请提供授权码");
     process.exit(1);
@@ -63,7 +63,16 @@ async function cmdLoginCode(code: string) {
 
   console.log("正在登录...");
   try {
-    const userInfo = await client.loginWithCode(code);
+    // Support Home Assistant hybrid mode
+    const loginOptions =
+      options?.redirectUri || options?.deviceId
+        ? {
+            redirect_uri: options.redirectUri,
+            device_id: options.deviceId,
+          }
+        : undefined;
+
+    const userInfo = await client.loginWithCode(code, loginOptions);
     console.log(`✓ 登录成功: ${userInfo.miliaoNick} (${userInfo.userId})`);
 
     // Load devices
@@ -231,9 +240,24 @@ async function main() {
       case "login":
         await cmdLogin();
         break;
-      case "login-code":
-        await cmdLoginCode(args[1]);
+      case "login-code": {
+        // Parse arguments: login-code <code> [--redirect-uri <uri>] [--device-id <id>]
+        const code = args[1];
+        const options: { redirectUri?: string; deviceId?: string } = {};
+
+        for (let i = 2; i < args.length; i++) {
+          if (args[i] === "--redirect-uri" && args[i + 1]) {
+            options.redirectUri = args[i + 1];
+            i++;
+          } else if (args[i] === "--device-id" && args[i + 1]) {
+            options.deviceId = args[i + 1];
+            i++;
+          }
+        }
+
+        await cmdLoginCode(code, options);
         break;
+      }
       case "devices":
         await cmdDevices();
         break;

@@ -127,7 +127,13 @@ export class XiaomiClient {
   /**
    * Login with authorization code
    */
-  async loginWithCode(code: string): Promise<UserInfo> {
+  async loginWithCode(
+    code: string,
+    options?: {
+      redirect_uri?: string;
+      device_id?: string;
+    },
+  ): Promise<UserInfo> {
     if (!this.oauthClient) {
       this.oauthClient = new XiaomiOAuthClient({
         client_id: this.config.client_id,
@@ -137,8 +143,8 @@ export class XiaomiClient {
       });
     }
 
-    // Get access token
-    const token = await this.oauthClient.getAccessToken(code);
+    // Get access token (support Home Assistant hybrid mode)
+    const token = await this.oauthClient.getAccessToken(code, options);
     await this.storage.updateToken(token);
 
     // Initialize HTTP client
