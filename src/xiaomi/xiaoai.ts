@@ -17,19 +17,16 @@ export interface XiaoAISpeakerConfig {
   // Common intelligent speaker service IDs (may vary by model)
   // siid=5 is common for intelligent-speaker service
   siid?: number;
-  // aiid for execute-text-directive (commonly aiid=5)
+  // aiid for play-text (TTS - 让小爱说话) (commonly aiid=1)
+  play_text_aiid?: number;
+  // aiid for execute-text-directive (语音命令 - 说话给小爱听) (commonly aiid=5)
   execute_text_directive_aiid?: number;
-  // piid for text parameter (commonly piid=1)
-  text_piid?: number;
-  // piid for silent_execution parameter (commonly piid=3)
-  silent_execution_piid?: number;
 }
 
 const DEFAULT_SPEAKER_CONFIG: Required<XiaoAISpeakerConfig> = {
   siid: 5, // intelligent-speaker service
-  execute_text_directive_aiid: 5, // execute-text-directive action
-  text_piid: 1, // text parameter
-  silent_execution_piid: 3, // silent_execution parameter
+  play_text_aiid: 1, // play-text action (TTS)
+  execute_text_directive_aiid: 5, // execute-text-directive action (voice command)
 };
 
 export class XiaoAISpeaker {
@@ -70,11 +67,10 @@ export class XiaoAISpeaker {
   }
 
   /**
-   * Execute text directive (TTS/command)
-   * @param text Text to speak or command to execute
-   * @param silent_execution Whether to execute silently (default: false)
+   * Play text (TTS - 让小爱说话)
+   * @param text Text for the speaker to say
    */
-  async speak(text: string, silent_execution: boolean = false): Promise<void> {
+  async speak(text: string): Promise<void> {
     if (!text || text.trim() === "") {
       throw new XiaoAIError("Text cannot be empty");
     }
@@ -82,8 +78,8 @@ export class XiaoAISpeaker {
     const action: MIoTAction = {
       did: this.device.did,
       siid: this.config.siid,
-      aiid: this.config.execute_text_directive_aiid,
-      in: [text, silent_execution],
+      aiid: this.config.play_text_aiid, // aiid=1: play-text (TTS)
+      in: [text], // Only needs text parameter
     };
 
     try {
@@ -91,7 +87,7 @@ export class XiaoAISpeaker {
 
       if (result.code !== 0) {
         throw new XiaoAIError(
-          `Failed to execute text directive: code=${result.code}, device=${this.device.did}`,
+          `Failed to play text: code=${result.code}, device=${this.device.did}`,
         );
       }
     } catch (error) {
@@ -105,17 +101,52 @@ export class XiaoAISpeaker {
   }
 
   /**
-   * Play a sound effect
+   * Execute text directive (语音命令 - 说话给小爱听)
+   * @param text Voice command text
+   * @param silent_execution Whether to execute silently (default: false)
    */
-  async playSound(sound: string): Promise<void> {
-    await this.speak(sound, false);
+  async executeVoiceCommand(text: string, silent_execution: boolean = false): Promise<void> {
+    if (!text || text.trim() === "") {
+      throw new XiaoAIError("Text cannot be empty");
+    }
+
+    const action: MIoTAction = {
+      did: this.device.did,
+      siid: this.config.siid,
+      aiid: this.config.execute_text_directive_aiid, // aiid=5: execute-text-directive
+      in: [text, silent_execution],
+    };
+
+    try {
+      const result = await this.httpClient.executeAction(action);
+
+      if (result.code !== 0) {
+        throw new XiaoAIError(
+          `Failed to execute voice command: code=${result.code}, device=${this.device.did}`,
+        );
+      }
+    } catch (error) {
+      if (error instanceof XiaoAIError) {
+        throw error;
+      }
+      throw new XiaoAIError(
+        `Failed to execute command on device ${this.device.did}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**
-   * Execute a command silently (without TTS feedback)
+   * Execute a voice command (说话给小爱听)
    */
-  async executeCommandSilently(command: string): Promise<void> {
-    await this.speak(command, true);
+  async sendCommand(command: string): Promise<void> {
+    await this.executeVoiceCommand(command, false);
+  }
+
+  /**
+   * Execute a voice command silently (without TTS feedback)
+   */
+  async sendCommandSilently(command: string): Promise<void> {
+    await this.executeVoiceCommand(command, true);
   }
 
   /**

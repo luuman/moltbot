@@ -11,15 +11,16 @@ async function showHelp() {
 Xiaomi CLI Tool - 小米智能家居命令行工具
 
 用法:
-  xiaomi login                    - 开始登录流程
-  xiaomi login-code <code>        - 使用授权码完成登录
-  xiaomi devices                  - 列出所有设备
-  xiaomi speakers                 - 列出所有小爱音箱
-  xiaomi speak <did> <text>       - 让小爱音箱播报文本
-  xiaomi speak-silent <did> <cmd> - 静默执行命令
-  xiaomi info                     - 显示用户信息
-  xiaomi logout                   - 登出
-  xiaomi help                     - 显示帮助
+  xiaomi login                       - 开始登录流程
+  xiaomi login-code <code>           - 使用授权码完成登录
+  xiaomi devices                     - 列出所有设备
+  xiaomi speakers                    - 列出所有小爱音箱
+  xiaomi speak <did> <text>          - 让小爱音箱播报文本 (TTS)
+  xiaomi command <did> <cmd>         - 发送语音命令给小爱 (模拟说话给小爱听)
+  xiaomi command-silent <did> <cmd>  - 静默执行语音命令
+  xiaomi info                        - 显示用户信息
+  xiaomi logout                      - 登出
+  xiaomi help                        - 显示帮助
 
 示例:
   # 1. 开始登录
@@ -31,11 +32,14 @@ Xiaomi CLI Tool - 小米智能家居命令行工具
   # 3. 列出所有小爱音箱
   xiaomi speakers
 
-  # 4. 让小爱音箱播报
+  # 4. 让小爱音箱播报文本 (TTS)
   xiaomi speak 123456789 "你好，今天天气真好"
 
-  # 5. 静默执行命令
-  xiaomi speak-silent 123456789 "打开卧室灯"
+  # 5. 发送语音命令 (模拟说话给小爱听)
+  xiaomi command 123456789 "打开卧室灯"
+
+  # 6. 静默执行语音命令 (不会有语音反馈)
+  xiaomi command-silent 123456789 "播放音乐"
 `);
 }
 
@@ -161,10 +165,10 @@ async function cmdSpeak(did: string, text: string) {
   }
 }
 
-async function cmdSpeakSilent(did: string, command: string) {
+async function cmdCommand(did: string, command: string) {
   if (!did || !command) {
     console.error("错误: 请提供设备 DID 和命令");
-    console.error("用法: xiaomi speak-silent <did> <command>");
+    console.error("用法: xiaomi command <did> <command>");
     process.exit(1);
   }
 
@@ -178,10 +182,38 @@ async function cmdSpeakSilent(did: string, command: string) {
 
   await client.loadDevices();
 
-  console.log(`正在发送静默命令到设备 ${did}...`);
+  console.log(`正在发送语音命令到设备 ${did}...`);
   try {
     const xiaoai = client.createXiaoAISpeaker(did);
-    await xiaoai.executeCommandSilently(command);
+    await xiaoai.sendCommand(command);
+    console.log(`✓ 成功发送到 ${xiaoai.getDeviceName()}`);
+  } catch (error) {
+    console.error("✗ 发送失败:", error instanceof Error ? error.message : error);
+    process.exit(1);
+  }
+}
+
+async function cmdCommandSilent(did: string, command: string) {
+  if (!did || !command) {
+    console.error("错误: 请提供设备 DID 和命令");
+    console.error("用法: xiaomi command-silent <did> <command>");
+    process.exit(1);
+  }
+
+  const client = new XiaomiClient();
+  await client.init();
+
+  if (!(await client.isLoggedIn())) {
+    console.error("错误: 未登录，请先运行 xiaomi login");
+    process.exit(1);
+  }
+
+  await client.loadDevices();
+
+  console.log(`正在发送静默语音命令到设备 ${did}...`);
+  try {
+    const xiaoai = client.createXiaoAISpeaker(did);
+    await xiaoai.sendCommandSilently(command);
     console.log(`✓ 成功发送到 ${xiaoai.getDeviceName()}`);
   } catch (error) {
     console.error("✗ 发送失败:", error instanceof Error ? error.message : error);
@@ -267,8 +299,11 @@ async function main() {
       case "speak":
         await cmdSpeak(args[1], args.slice(2).join(" "));
         break;
-      case "speak-silent":
-        await cmdSpeakSilent(args[1], args.slice(2).join(" "));
+      case "command":
+        await cmdCommand(args[1], args.slice(2).join(" "));
+        break;
+      case "command-silent":
+        await cmdCommandSilent(args[1], args.slice(2).join(" "));
         break;
       case "info":
         await cmdInfo();
