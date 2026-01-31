@@ -36,7 +36,8 @@ export class XiaomiClient {
     this.config = {
       cloud_server: config?.cloud_server || "cn",
       client_id: config?.client_id || OAUTH2_CLIENT_ID,
-      redirect_url: config?.redirect_url || "http://localhost:8123",
+      // Use Home Assistant's redirect URL to mimic HA
+      redirect_url: config?.redirect_url || "http://homeassistant.local:8123",
       storage_path: config?.storage_path || "",
     };
 

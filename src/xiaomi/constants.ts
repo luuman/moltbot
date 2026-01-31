@@ -7,6 +7,10 @@ export const OAUTH2_CLIENT_ID = "2882303761520251711";
 export const OAUTH2_AUTH_URL = "https://account.xiaomi.com/oauth2/authorize";
 export const DEFAULT_OAUTH2_API_HOST = "ha.api.io.mi.com";
 
+// Home Assistant's registered redirect URL
+// We use this to mimic Home Assistant for OAuth2 authentication
+export const HOME_ASSISTANT_REDIRECT_URL = "http://homeassistant.local:8123";
+
 export const MIHOME_HTTP_API_TIMEOUT = 30000; // 30 seconds
 
 export const TOKEN_EXPIRES_TS_RATIO = 0.7; // Refresh token when 70% of lifetime is reached
