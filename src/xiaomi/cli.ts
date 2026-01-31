@@ -11,16 +11,22 @@ async function showHelp() {
 Xiaomi CLI Tool - 小米智能家居命令行工具
 
 用法:
-  xiaomi login                       - 开始登录流程
-  xiaomi login-code <code>           - 使用授权码完成登录
-  xiaomi devices                     - 列出所有设备
-  xiaomi speakers                    - 列出所有小爱音箱
-  xiaomi speak <did> <text>          - 让小爱音箱播报文本 (TTS)
-  xiaomi command <did> <cmd>         - 发送语音命令给小爱 (模拟说话给小爱听)
-  xiaomi command-silent <did> <cmd>  - 静默执行语音命令
-  xiaomi info                        - 显示用户信息
-  xiaomi logout                      - 登出
-  xiaomi help                        - 显示帮助
+  xiaomi login                            - 开始登录流程
+  xiaomi login-code <code>                - 使用授权码完成登录
+  xiaomi devices                          - 列出所有设备
+  xiaomi speakers                         - 列出所有小爱音箱
+  xiaomi speak [设备名称或DID] <文本>      - 让小爱音箱播报文本 (TTS)
+  xiaomi command [设备名称或DID] <命令>    - 发送语音命令给小爱 (模拟说话给小爱听)
+  xiaomi command-silent [设备名称或DID] <命令> - 静默执行语音命令
+  xiaomi info                             - 显示用户信息
+  xiaomi logout                           - 登出
+  xiaomi help                             - 显示帮助
+
+参数说明:
+  [设备名称或DID] - 可选参数，支持：
+    - 省略：自动使用第一个在线的小爱音箱
+    - 设备名称：例如 "小爱音箱" 或 "Play"（支持模糊匹配）
+    - DID：设备ID，例如 "289833424"
 
 示例:
   # 1. 开始登录
@@ -32,14 +38,21 @@ Xiaomi CLI Tool - 小米智能家居命令行工具
   # 3. 列出所有小爱音箱
   xiaomi speakers
 
-  # 4. 让小爱音箱播报文本 (TTS)
-  xiaomi speak 123456789 "你好，今天天气真好"
+  # 4. 使用默认小爱音箱播报（自动选择第一个在线的）
+  xiaomi speak "你好，今天天气真好"
 
-  # 5. 发送语音命令 (模拟说话给小爱听)
-  xiaomi command 123456789 "打开卧室灯"
+  # 5. 指定设备名称播报
+  xiaomi speak "小爱音箱" "你好，今天天气真好"
+  xiaomi speak Play "你好"  # 支持部分匹配
 
-  # 6. 静默执行语音命令 (不会有语音反馈)
-  xiaomi command-silent 123456789 "播放音乐"
+  # 6. 使用DID播报（传统方式）
+  xiaomi speak 289833424 "你好，今天天气真好"
+
+  # 7. 发送语音命令（默认设备）
+  xiaomi command "打开卧室灯"
+
+  # 8. 静默执行语音命令（指定设备）
+  xiaomi command-silent "小爱音箱" "播放音乐"
 `);
 }
 
@@ -137,13 +150,7 @@ async function cmdSpeakers() {
   }
 }
 
-async function cmdSpeak(did: string, text: string) {
-  if (!did || !text) {
-    console.error("错误: 请提供设备 DID 和文本");
-    console.error("用法: xiaomi speak <did> <text>");
-    process.exit(1);
-  }
-
+async function cmdSpeak(deviceOrText: string, maybeText?: string) {
   const client = new XiaomiClient();
   await client.init();
 
@@ -154,24 +161,47 @@ async function cmdSpeak(did: string, text: string) {
 
   await client.loadDevices();
 
-  console.log(`正在发送 TTS 指令到设备 ${did}...`);
+  let device: string | undefined;
+  let text: string;
+
+  // Parse arguments: either "text" or "device text"
+  if (maybeText) {
+    device = deviceOrText;
+    text = maybeText;
+  } else {
+    device = undefined;
+    text = deviceOrText;
+  }
+
+  if (!text) {
+    console.error("错误: 请提供要播报的文本");
+    console.error("用法: xiaomi speak [设备名称或DID] <文本>");
+    console.error("示例:");
+    console.error('  xiaomi speak "你好"                    # 使用默认设备');
+    console.error('  xiaomi speak "小爱音箱" "你好"          # 指定设备名称');
+    console.error('  xiaomi speak 289833424 "你好"          # 指定DID');
+    process.exit(1);
+  }
+
   try {
-    const xiaoai = client.createXiaoAISpeaker(did);
+    const xiaoai = client.createXiaoAISpeakerSmart(device);
+    const deviceName = xiaoai.getDeviceName();
+
+    if (device) {
+      console.log(`正在发送 TTS 指令到设备 ${deviceName}...`);
+    } else {
+      console.log(`正在使用默认设备 ${deviceName} 播报...`);
+    }
+
     await xiaoai.speak(text);
-    console.log(`✓ 成功发送到 ${xiaoai.getDeviceName()}`);
+    console.log(`✓ 成功发送到 ${deviceName}`);
   } catch (error) {
     console.error("✗ 发送失败:", error instanceof Error ? error.message : error);
     process.exit(1);
   }
 }
 
-async function cmdCommand(did: string, command: string) {
-  if (!did || !command) {
-    console.error("错误: 请提供设备 DID 和命令");
-    console.error("用法: xiaomi command <did> <command>");
-    process.exit(1);
-  }
-
+async function cmdCommand(deviceOrCommand: string, maybeCommand?: string) {
   const client = new XiaomiClient();
   await client.init();
 
@@ -182,24 +212,47 @@ async function cmdCommand(did: string, command: string) {
 
   await client.loadDevices();
 
-  console.log(`正在发送语音命令到设备 ${did}...`);
+  let device: string | undefined;
+  let command: string;
+
+  // Parse arguments: either "command" or "device command"
+  if (maybeCommand) {
+    device = deviceOrCommand;
+    command = maybeCommand;
+  } else {
+    device = undefined;
+    command = deviceOrCommand;
+  }
+
+  if (!command) {
+    console.error("错误: 请提供要执行的命令");
+    console.error("用法: xiaomi command [设备名称或DID] <命令>");
+    console.error("示例:");
+    console.error('  xiaomi command "打开客厅灯"            # 使用默认设备');
+    console.error('  xiaomi command "小爱音箱" "播放音乐"    # 指定设备名称');
+    console.error('  xiaomi command 289833424 "现在几点"    # 指定DID');
+    process.exit(1);
+  }
+
   try {
-    const xiaoai = client.createXiaoAISpeaker(did);
+    const xiaoai = client.createXiaoAISpeakerSmart(device);
+    const deviceName = xiaoai.getDeviceName();
+
+    if (device) {
+      console.log(`正在发送语音命令到设备 ${deviceName}...`);
+    } else {
+      console.log(`正在使用默认设备 ${deviceName} 执行命令...`);
+    }
+
     await xiaoai.sendCommand(command);
-    console.log(`✓ 成功发送到 ${xiaoai.getDeviceName()}`);
+    console.log(`✓ 成功发送到 ${deviceName}`);
   } catch (error) {
     console.error("✗ 发送失败:", error instanceof Error ? error.message : error);
     process.exit(1);
   }
 }
 
-async function cmdCommandSilent(did: string, command: string) {
-  if (!did || !command) {
-    console.error("错误: 请提供设备 DID 和命令");
-    console.error("用法: xiaomi command-silent <did> <command>");
-    process.exit(1);
-  }
-
+async function cmdCommandSilent(deviceOrCommand: string, maybeCommand?: string) {
   const client = new XiaomiClient();
   await client.init();
 
@@ -210,11 +263,40 @@ async function cmdCommandSilent(did: string, command: string) {
 
   await client.loadDevices();
 
-  console.log(`正在发送静默语音命令到设备 ${did}...`);
+  let device: string | undefined;
+  let command: string;
+
+  // Parse arguments: either "command" or "device command"
+  if (maybeCommand) {
+    device = deviceOrCommand;
+    command = maybeCommand;
+  } else {
+    device = undefined;
+    command = deviceOrCommand;
+  }
+
+  if (!command) {
+    console.error("错误: 请提供要执行的命令");
+    console.error("用法: xiaomi command-silent [设备名称或DID] <命令>");
+    console.error("示例:");
+    console.error('  xiaomi command-silent "播放音乐"         # 使用默认设备');
+    console.error('  xiaomi command-silent "小爱音箱" "下一曲" # 指定设备名称');
+    console.error('  xiaomi command-silent 289833424 "暂停"   # 指定DID');
+    process.exit(1);
+  }
+
   try {
-    const xiaoai = client.createXiaoAISpeaker(did);
+    const xiaoai = client.createXiaoAISpeakerSmart(device);
+    const deviceName = xiaoai.getDeviceName();
+
+    if (device) {
+      console.log(`正在发送静默语音命令到设备 ${deviceName}...`);
+    } else {
+      console.log(`正在使用默认设备 ${deviceName} 静默执行...`);
+    }
+
     await xiaoai.sendCommandSilently(command);
-    console.log(`✓ 成功发送到 ${xiaoai.getDeviceName()}`);
+    console.log(`✓ 成功发送到 ${deviceName}`);
   } catch (error) {
     console.error("✗ 发送失败:", error instanceof Error ? error.message : error);
     process.exit(1);

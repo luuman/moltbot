@@ -265,6 +265,31 @@ export class XiaomiClient {
   }
 
   /**
+   * Find device by name or DID
+   * 通过设备名称或DID查找设备
+   */
+  findDevice(nameOrDid: string): DeviceInfo | undefined {
+    if (!this.devices) {
+      return undefined;
+    }
+
+    // Try exact DID match first
+    if (this.devices[nameOrDid]) {
+      return this.devices[nameOrDid];
+    }
+
+    // Try name match (case-insensitive, partial match)
+    const lowerQuery = nameOrDid.toLowerCase();
+    for (const device of Object.values(this.devices)) {
+      if (device.name.toLowerCase().includes(lowerQuery)) {
+        return device;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
    * Get all XiaoAI speakers
    */
   getXiaoAISpeakers(): DeviceInfo[] {
@@ -272,6 +297,23 @@ export class XiaomiClient {
       return [];
     }
     return findXiaoAISpeakers(this.devices);
+  }
+
+  /**
+   * Get default XiaoAI speaker (first online speaker)
+   * 获取默认小爱音箱（第一个在线的）
+   */
+  getDefaultXiaoAISpeaker(): DeviceInfo | undefined {
+    const speakers = this.getXiaoAISpeakers();
+
+    // Find first online speaker
+    const onlineSpeaker = speakers.find((s) => s.online);
+    if (onlineSpeaker) {
+      return onlineSpeaker;
+    }
+
+    // Fallback to first speaker (even if offline)
+    return speakers[0];
   }
 
   /**
@@ -285,6 +327,41 @@ export class XiaomiClient {
     const device = this.devices?.[deviceId];
     if (!device) {
       throw new Error(`Device ${deviceId} not found`);
+    }
+
+    return createXiaoAISpeaker(this.httpClient, device);
+  }
+
+  /**
+   * Create XiaoAI speaker controller by name, DID, or use default
+   * 通过名称、DID创建小爱音箱控制器，或使用默认设备
+   *
+   * @param nameOrDid - 设备名称、DID，或留空使用默认设备
+   */
+  createXiaoAISpeakerSmart(nameOrDid?: string): XiaoAISpeaker {
+    if (!this.httpClient) {
+      throw new XiaomiHttpError("Not logged in");
+    }
+
+    let device: DeviceInfo | undefined;
+
+    if (nameOrDid) {
+      // Try to find by name or DID
+      device = this.findDevice(nameOrDid);
+      if (!device) {
+        throw new Error(`Device "${nameOrDid}" not found`);
+      }
+      // Verify it's a speaker
+      const speakers = this.getXiaoAISpeakers();
+      if (!speakers.find((s) => s.did === device!.did)) {
+        throw new Error(`Device "${nameOrDid}" is not a XiaoAI speaker`);
+      }
+    } else {
+      // Use default speaker
+      device = this.getDefaultXiaoAISpeaker();
+      if (!device) {
+        throw new Error("No XiaoAI speaker found. Please add a XiaoAI speaker first.");
+      }
     }
 
     return createXiaoAISpeaker(this.httpClient, device);
