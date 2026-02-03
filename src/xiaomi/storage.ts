@@ -223,7 +223,7 @@ export class XiaomiStorage {
     return {
       cloud_server: "cn",
       client_id: OAUTH2_CLIENT_ID,
-      redirect_url: "http://localhost:8123",
+      redirect_url: "http://homeassistant.local:8123",
     };
   }
 }

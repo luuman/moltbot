@@ -270,13 +270,12 @@ export class XiaomiHttpClient {
   }
 
   /**
-   * Get device list for specific homes
+   * Get device list for specific device IDs
    */
-  async getDeviceList(home_ids: string[]): Promise<Record<string, DeviceInfo>> {
-    // Implementation would require more complex pagination handling
-    // For now, return a simplified version
-    const result = await this.apiPost("/app/v2/home/device_list", {
-      home_id: home_ids.join(","),
+  async getDeviceList(dids: string[]): Promise<Record<string, DeviceInfo>> {
+    // Use device_list_page endpoint (matches HA implementation)
+    const result = await this.apiPost("/app/v2/home/device_list_page", {
+      dids: dids, // Pass as array, not comma-separated string
       limit: 200,
       get_split_device: true,
       get_third_device: true,
@@ -284,12 +283,17 @@ export class XiaomiHttpClient {
 
     const devices: Record<string, DeviceInfo> = {};
     for (const device of result.list || []) {
-      if (device.did) {
+      // Skip miwifi.* router devices (not supported)
+      if (device.did && device.did.startsWith("miwifi.")) {
+        continue;
+      }
+
+      if (device.did && device.name && device.model && device.spec_type) {
         devices[device.did] = {
           did: device.did,
           model: device.model,
           name: device.name,
-          type: device.type || "unknown",
+          type: device.spec_type || "unknown",
           parent_id: device.parent_id,
           parent_model: device.parent_model,
           online: device.isOnline !== false,

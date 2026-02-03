@@ -32,7 +32,7 @@ export interface OAuthConfig {
 }
 
 export class XiaomiOAuthClient {
-  private client_id: number;
+  private client_id: string;
   private redirect_url: string;
   private oauth_host: string;
   private device_id: string;
@@ -45,7 +45,7 @@ export class XiaomiOAuthClient {
       throw new XiaomiOAuthError("Invalid OAuth configuration");
     }
 
-    this.client_id = parseInt(client_id, 10);
+    this.client_id = client_id;
     this.redirect_url = redirect_url;
     this.device_id = `ha.${uuid}`;
 
@@ -88,7 +88,7 @@ export class XiaomiOAuthClient {
   }): string {
     const params = new URLSearchParams({
       redirect_uri: options?.redirect_url || this.redirect_url,
-      client_id: this.client_id.toString(),
+      client_id: this.client_id,
       response_type: "code",
       device_id: this.device_id,
       state: options?.state || this.state,
@@ -106,16 +106,22 @@ export class XiaomiOAuthClient {
   /**
    * Get access token by authorization code
    */
-  async getAccessToken(code: string): Promise<OAuthToken> {
+  async getAccessToken(
+    code: string,
+    options?: {
+      redirect_uri?: string;
+      device_id?: string;
+    },
+  ): Promise<OAuthToken> {
     if (!code || typeof code !== "string") {
       throw new XiaomiOAuthError("Invalid authorization code");
     }
 
     return await this._getTokenAsync({
       client_id: this.client_id,
-      redirect_uri: this.redirect_url,
+      redirect_uri: options?.redirect_uri || this.redirect_url,
       code,
-      device_id: this.device_id,
+      device_id: options?.device_id || this.device_id,
     });
   }
 
