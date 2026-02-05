@@ -48,7 +48,7 @@ export class LocaleSelector extends LitElement {
       display: flex;
       align-items: center;
     }
-    
+
     .locale-selector select {
       background: var(--bg-2);
       color: var(--fg-1);
@@ -58,7 +58,7 @@ export class LocaleSelector extends LitElement {
       font-size: 14px;
       cursor: pointer;
     }
-    
+
     .locale-selector select:focus {
       outline: none;
       border-color: var(--accent-1);

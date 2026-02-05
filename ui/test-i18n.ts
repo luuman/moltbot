@@ -32,6 +32,10 @@ console.log("- Cron next wake:", t("overview.cron_next_wake", { nextRun: "2Â∞èÊó
 
 // Test fallback behavior
 console.log("\nTesting fallback for non-existent key:");
-console.log("- Non-existent key:", t("non.existent.key" as any));
+// @ts-expect-error Testing fallback for non-existent key
+console.log(
+  "- Non-existent key:",
+  t("non.existent.key" as keyof typeof import("./src/i18n/i18n.js").TranslationKeys),
+);
 
 console.log("\n=== Test Complete ===");
